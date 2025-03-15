@@ -1,6 +1,7 @@
 const express = require("express");
 const net = require("net");
 const mongoose = require("mongoose");
+const http = require("http");
 require("dotenv").config();
 
 const app = express();
@@ -10,8 +11,8 @@ mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log("MongoDB Connected"))
-.catch((err) => console.error("MongoDB Connection Error:", err));
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.error("MongoDB Connection Error:", err));
 
 // Define GPS Data Schema
 const gpsSchema = new mongoose.Schema({
@@ -24,8 +25,11 @@ const gpsSchema = new mongoose.Schema({
 
 const GPSData = mongoose.model("GPSData", gpsSchema);
 
-// Create TCP Server
-const tcpServer = net.createServer((socket) => {
+// Create HTTP Server
+const server = http.createServer(app);
+
+// Create TCP Server using the same HTTP server
+server.on("connection", (socket) => {
   console.log(`GPS Device Connected: ${socket.remoteAddress}:${socket.remotePort}`);
 
   socket.on("data", async (data) => {
@@ -57,25 +61,21 @@ const tcpServer = net.createServer((socket) => {
   });
 });
 
-const TCP_PORT = process.env.PORT || 7000;
-tcpServer.listen(TCP_PORT, '0.0.0.0', () => {
-  console.log(`TCP Server Listening on Port ${TCP_PORT}`);
-});
-
-//  HTTP Endpoint to check status
+// HTTP Endpoint to check status
 app.get("/", (req, res) => {
   res.send("Server is running");
 });
 
-//  HTTP Endpoint to list stored GPS data
+// HTTP Endpoint to list stored GPS data
 app.get("/gps-data", async (req, res) => {
   const data = await GPSData.find().sort({ timestamp: -1 });
   res.json(data);
 });
 
-const HTTP_PORT = 3000; // Use a different port for HTTP
-app.listen(HTTP_PORT, () => {
-  console.log(`HTTP Server Listening on Port ${HTTP_PORT}`);
+// Start server on the same port
+const PORT = process.env.PORT || 7000;
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });
 
 // Function to Parse Ruptela GPS Data
