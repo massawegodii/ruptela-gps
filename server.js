@@ -86,12 +86,21 @@ app.listen(HTTP_PORT, "0.0.0.0", () => {
 function parseRuptelaData(data) {
   try {
     const hexString = data.toString("hex");
+    console.log(" Raw Data (Hex):", hexString);
+
+    const imei = hexString.substring(0, 15);
+    const latitude = parseInt(hexString.substring(16, 24), 16) / 10000000;
+    const longitude = parseInt(hexString.substring(24, 32), 16) / 10000000;
+    let speed = parseInt(hexString.substring(32, 34), 16);
+
+    // If speed is invalid or suspiciously high, assume stationary
+    if (speed > 100) speed = 0;
 
     return {
-      imei: hexString.substring(0, 15), // Extract IMEI
-      latitude: parseInt(hexString.substring(16, 24), 16) / 10000000,
-      longitude: parseInt(hexString.substring(24, 32), 16) / 10000000,
-      speed: parseInt(hexString.substring(32, 34), 16),
+      imei,
+      latitude,
+      longitude,
+      speed,
       timestamp: new Date(),
     };
   } catch (err) {
@@ -99,3 +108,4 @@ function parseRuptelaData(data) {
     return null;
   }
 }
+
