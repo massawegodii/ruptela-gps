@@ -26,10 +26,11 @@ const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
 // Create TCP Server
 const tcpServer = net.createServer((socket) => {
-  console.log(`📡 GPS Device Connected: ${socket.remoteAddress}:${socket.remotePort}`);
+  console.log(` GPS Device Connected: ${socket.remoteAddress}:${socket.remotePort}`);
 
   socket.on("data", async (data) => {
-    console.log(" Raw Data Received (Hex):", data.toString("hex"));
+    console.log(" Raw Data Buffer:", data);
+    console.log(" Raw Data as Hex:", data.toString("hex"));
 
     try {
       const parsedData = parseRuptelaData(data);
@@ -41,14 +42,14 @@ const tcpServer = net.createServer((socket) => {
         console.log(" GPS Data Saved to MongoDB");
       }
 
-      socket.write("ACK"); // Send ACK back to device
+      socket.write(Buffer.from("01", "hex")); // Send ACK back to device
     } catch (err) {
       console.error(" Error Processing Data:", err);
     }
   });
 
   socket.on("close", () => {
-    console.log(" GPS Device Disconnected");
+    console.log("⚠️ GPS Device Disconnected");
   });
 
   socket.on("error", (err) => {
@@ -61,12 +62,12 @@ tcpServer.listen(TCP_PORT, "0.0.0.0", () => {
   console.log(` TCP Server Listening on Port ${TCP_PORT}`);
 });
 
-//  Add a default route for the root endpoint
+// Default API Route
 app.get("/", (req, res) => {
   res.send(" Welcome to the Ruptela GPS API!");
 });
 
-// HTTP Endpoint to list stored GPS data
+// API Endpoint to List GPS Data
 app.get("/gps-data", async (req, res) => {
   try {
     const data = await GPSData.find().sort({ timestamp: -1 });
@@ -85,16 +86,22 @@ app.listen(HTTP_PORT, "0.0.0.0", () => {
 // Function to Parse Ruptela GPS Data
 function parseRuptelaData(data) {
   try {
-    const hexString = data.toString("hex");
-    console.log(" Raw Data (Hex):", hexString);
+    console.log(" Raw Data (Hex):", data.toString("hex"));
 
-    const imei = hexString.substring(0, 15);
-    const latitude = parseInt(hexString.substring(16, 24), 16) / 10000000;
-    const longitude = parseInt(hexString.substring(24, 32), 16) / 10000000;
-    let speed = parseInt(hexString.substring(32, 34), 16);
+    // Parse IMEI (Usually 8 bytes starting at byte 1)
+    const imei = data.slice(1, 9).toString("hex");
 
-    // If speed is invalid or suspiciously high, assume stationary
-    if (speed > 100) speed = 0;
+    // Parse Latitude (4 bytes, Big Endian)
+    const latitude = data.readInt32BE(9) / 10000000;
+
+    // Parse Longitude (4 bytes, Big Endian)
+    const longitude = data.readInt32BE(13) / 10000000;
+
+    // Parse Speed (1 byte)
+    let speed = data.readUInt8(17);
+
+    // If speed is too high, assume GPS is stationary
+    if (speed > 200) speed = 0;
 
     return {
       imei,
@@ -104,8 +111,7 @@ function parseRuptelaData(data) {
       timestamp: new Date(),
     };
   } catch (err) {
-    console.error(" Error Parsing Data:", err);
+    console.error("❌ Error Parsing Data:", err);
     return null;
   }
 }
-
