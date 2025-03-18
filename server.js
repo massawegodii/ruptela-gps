@@ -8,7 +8,6 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log(' MongoDB Connected'))
   .catch(err => console.error(' MongoDB Connection Error:', err));
 
-// Define GPS Data Schema
 const gpsSchema = new mongoose.Schema({
     imei: String,
     timestamp: Date,
@@ -22,7 +21,6 @@ const GpsData = mongoose.model('GpsData', gpsSchema);
 
 let deviceIMEI = {}; // Store IMEI per device
 
-// Create TCP Server
 const server = net.createServer((socket) => {
     console.log(' New GPS device connected:', socket.remoteAddress);
 
@@ -33,29 +31,26 @@ const server = net.createServer((socket) => {
             let parsedData = parseRuptelaData(data, socket);
             console.log(' Parsed GPS Data:', parsedData);
 
-            // Save data to MongoDB
             const gpsEntry = new GpsData(parsedData);
             await gpsEntry.save();
             console.log(' Data saved to MongoDB');
 
-            // Respond to GPS device (ACK)
-            socket.write(Buffer.from([0x01])); // Acknowledge receipt
+            socket.write(Buffer.from([0x01])); 
 
         } catch (error) {
             console.error(' Error parsing data:', error);
         }
     });
 
-    socket.on('end', () => console.log('Device disconnected'));
+    socket.on('end', () => console.log(' Device disconnected'));
     socket.on('error', (err) => console.error('⚠ Socket Error:', err));
 });
 
-// Start Server
 server.listen(process.env.PORT, '0.0.0.0', () => {
     console.log(` TCP server listening on port ${process.env.PORT}`);
 });
 
-// Function to parse Ruptela ECO5 Lite Binary Data
+// **Parsing Functions**
 function parseRuptelaData(data, socket) {
     let timestamp = parseTimestamp(data);
     let gps = parseGPS(data);
@@ -67,12 +62,11 @@ function parseRuptelaData(data, socket) {
         latitude: gps.latitude,
         longitude: gps.longitude,
         speed: speed,
-        ignition: (data.readUInt8(14) & 1) ? 'ON' : 'OFF',
+        ignition: (data.readUInt8(18) & 1) ? 'ON' : 'OFF', // Adjusted offset
         rawData: data.toString('hex')
     };
 }
 
-// Extract IMEI (Only once per device)
 function extractIMEI(data, socket) {
     try {
         if (!deviceIMEI[socket.remoteAddress]) {
@@ -82,46 +76,58 @@ function extractIMEI(data, socket) {
         }
         return deviceIMEI[socket.remoteAddress];
     } catch (error) {
-        console.error(" Error extracting IMEI:", error);
+        console.error("❌ Error extracting IMEI:", error);
         return "Unknown";
     }
 }
 
-// Parse timestamp
 function parseTimestamp(data) {
-    let timestampRaw = data.readUInt32BE(0);
-    
-    if (timestampRaw < 1000000000) {
-        console.warn("⚠ Invalid timestamp received. Using current time.");
+    try {
+        let timestampRaw = data.readUInt32BE(0);
+        
+        if (timestampRaw < 1000000000 || timestampRaw > Date.now() / 1000) {
+            console.warn("⚠ Invalid timestamp received. Using current time.");
+            return new Date();
+        }
+
+        return new Date(timestampRaw * 1000);
+    } catch (error) {
+        console.error(" Error parsing timestamp:", error);
         return new Date();
     }
-
-    return new Date(timestampRaw * 1000);
 }
 
-// Parse GPS
 function parseGPS(data) {
-    let latRaw = data.readInt32BE(4);
-    let lonRaw = data.readInt32BE(8);
-    let latitude = latRaw / 10000000;
-    let longitude = lonRaw / 10000000;
+    try {
+        let latRaw = data.readInt32BE(8);
+        let lonRaw = data.readInt32BE(12);
+        
+        let latitude = latRaw / 10000000;
+        let longitude = lonRaw / 10000000;
 
-    if (latitude === 0 || longitude === 0 || isNaN(latitude) || isNaN(longitude)) {
-        console.warn("⚠ GPS coordinates are invalid. Device may not have a fix.");
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            console.warn("⚠ Invalid GPS coordinates received.");
+            return { latitude: null, longitude: null };
+        }
+
+        return { latitude, longitude };
+    } catch (error) {
+        console.error(" Error parsing GPS data:", error);
         return { latitude: null, longitude: null };
     }
-
-    return { latitude, longitude };
 }
 
-// Parse speed
 function parseSpeed(data) {
-    let speed = data.readUInt16BE(12) / 10;
+    try {
+        let speed = data.readUInt16BE(16) / 10;
 
-    if (speed > 0.1) {
+        if (speed < 0.5) {
+            console.warn("⚠ Device is stationary, setting speed to 0.");
+            return 0;
+        }
         return speed;
-    } else {
-        console.warn("⚠ Device is stationary, setting speed to 0.");
+    } catch (error) {
+        console.error(" Error parsing speed:", error);
         return 0;
     }
 }
