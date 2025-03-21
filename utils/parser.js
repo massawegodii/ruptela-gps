@@ -1,9 +1,9 @@
 let deviceIMEI = {};
 
 export const parseRuptelaData = (data, socket) => {
-  let timestamp = parseTimestamp(data);
-  let gps = parseGPS(data);
-  let speed = parseSpeed(data);
+  const timestamp = parseTimestamp(data);
+  const gps = parseGPS(data);
+  const speed = parseSpeed(data);
 
   return {
     imei: extractIMEI(data, socket),
@@ -38,7 +38,7 @@ const extractIMEI = (data, socket) => {
 const parseTimestamp = (data) => {
   try {
     const timestampRaw = data.readUInt32BE(0);
-    return timestampRaw < 1000000000 || timestampRaw > Date.now() / 1000
+    return (timestampRaw < 1000000000 || timestampRaw > Date.now() / 1000)
       ? new Date()
       : new Date(timestampRaw * 1000);
   } catch (error) {
@@ -62,12 +62,7 @@ const parseGPS = (data) => {
     const latitudeBinary = latRaw.toString(2).padStart(32, "0");
     const longitudeBinary = lonRaw.toString(2).padStart(32, "0");
 
-    if (
-      latitude < -90 ||
-      latitude > 90 ||
-      longitude < -180 ||
-      longitude > 180
-    ) {
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
       console.warn("⚠ Invalid GPS coordinates received.");
       return {
         latitude: null,
@@ -90,7 +85,7 @@ const parseGPS = (data) => {
       longitudeBinary,
     };
   } catch (error) {
-    console.error("Error parsing GPS data:", error);
+    console.error("Error parsing GPS:", error);
     return {
       latitude: null,
       longitude: null,
