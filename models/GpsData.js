@@ -15,5 +15,4 @@ const gpsSchema = new mongoose.Schema({
   rawData: String,
 });
 
-const GpsData = mongoose.model("GpsData", gpsSchema);
-export default GpsData;
+export default mongoose.model("GpsData", gpsSchema);

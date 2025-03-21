@@ -29,20 +29,16 @@ const extractIMEI = (data, socket) => {
       deviceIMEI[socket.remoteAddress] = imei;
     }
     return deviceIMEI[socket.remoteAddress];
-  } catch (error) {
-    console.error("Error extracting IMEI:", error);
+  } catch {
     return "Unknown";
   }
 };
 
 const parseTimestamp = (data) => {
   try {
-    const timestampRaw = data.readUInt32BE(0);
-    return (timestampRaw < 1000000000 || timestampRaw > Date.now() / 1000)
-      ? new Date()
-      : new Date(timestampRaw * 1000);
-  } catch (error) {
-    console.error("Error parsing timestamp:", error);
+    const ts = data.readUInt32BE(0);
+    return ts < 1000000000 || ts > Date.now() / 1000 ? new Date() : new Date(ts * 1000);
+  } catch {
     return new Date();
   }
 };
@@ -63,7 +59,6 @@ const parseGPS = (data) => {
     const longitudeBinary = lonRaw.toString(2).padStart(32, "0");
 
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-      console.warn("⚠ Invalid GPS coordinates received.");
       return {
         latitude: null,
         longitude: null,
@@ -84,8 +79,7 @@ const parseGPS = (data) => {
       latitudeBinary,
       longitudeBinary,
     };
-  } catch (error) {
-    console.error("Error parsing GPS:", error);
+  } catch {
     return {
       latitude: null,
       longitude: null,
@@ -102,8 +96,7 @@ const parseSpeed = (data) => {
   try {
     const speed = data.readUInt16BE(18) / 10;
     return speed < 0.5 ? 0 : speed;
-  } catch (error) {
-    console.error("Error parsing speed:", error);
+  } catch {
     return 0;
   }
 };
