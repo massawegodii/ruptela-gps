@@ -5,7 +5,7 @@ import net from "net";
 import http from "http";
 import mongoose from "mongoose";
 import { Server } from "socket.io";
-import { handleGpsData } from "./controller/gpsController.js";
+import { handleGpsData } from "./controllers/gpsController.js";
 
 // Connect MongoDB
 mongoose.connect(process.env.MONGO_URI, {
