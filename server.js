@@ -20,8 +20,8 @@ const httpServer = http.createServer();
 const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
-httpServer.listen(7000, () =>
-  console.log(" WebSocket running at ws://64.23.202.81:7000")
+httpServer.listen(6000, () =>
+  console.log(" WebSocket running at ws://64.23.202.81:6000")
 );
 
 // TCP server
