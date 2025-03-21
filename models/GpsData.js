@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const gpsSchema = new mongoose.Schema({
   imei: String,
@@ -15,4 +15,5 @@ const gpsSchema = new mongoose.Schema({
   rawData: String,
 });
 
-module.exports = mongoose.model("GpsData", gpsSchema);
+const GpsData = mongoose.model("GpsData", gpsSchema);
+export default GpsData;

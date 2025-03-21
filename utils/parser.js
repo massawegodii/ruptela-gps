@@ -1,6 +1,6 @@
 let deviceIMEI = {};
 
-function parseRuptelaData(data, socket) {
+export const parseRuptelaData = (data, socket) => {
   let timestamp = parseTimestamp(data);
   let gps = parseGPS(data);
   let speed = parseSpeed(data);
@@ -19,13 +19,13 @@ function parseRuptelaData(data, socket) {
     longitudeBinary: gps.longitudeBinary,
     rawData: data.toString("hex"),
   };
-}
+};
 
-function extractIMEI(data, socket) {
+const extractIMEI = (data, socket) => {
   try {
     if (!deviceIMEI[socket.remoteAddress]) {
-      let imeiBuffer = data.slice(2, 10);
-      let imei = parseInt(imeiBuffer.toString("hex"), 16).toString();
+      const imeiBuffer = data.slice(2, 10);
+      const imei = parseInt(imeiBuffer.toString("hex"), 16).toString();
       deviceIMEI[socket.remoteAddress] = imei;
     }
     return deviceIMEI[socket.remoteAddress];
@@ -33,36 +33,41 @@ function extractIMEI(data, socket) {
     console.error("Error extracting IMEI:", error);
     return "Unknown";
   }
-}
+};
 
-function parseTimestamp(data) {
+const parseTimestamp = (data) => {
   try {
-    let timestampRaw = data.readUInt32BE(0);
-    return (timestampRaw < 1000000000 || timestampRaw > Date.now() / 1000)
+    const timestampRaw = data.readUInt32BE(0);
+    return timestampRaw < 1000000000 || timestampRaw > Date.now() / 1000
       ? new Date()
       : new Date(timestampRaw * 1000);
   } catch (error) {
     console.error("Error parsing timestamp:", error);
     return new Date();
   }
-}
+};
 
-function parseGPS(data) {
+const parseGPS = (data) => {
   try {
-    let lonRaw = data.readInt32BE(20);
-    let latRaw = data.readInt32BE(24);
-    let altRaw = data.readUInt16BE(28);
+    const lonRaw = data.readInt32BE(20);
+    const latRaw = data.readInt32BE(24);
+    const altRaw = data.readUInt16BE(28);
 
-    let latitude = latRaw / 1e7;
-    let longitude = lonRaw / 1e7;
-    let altitude = altRaw / 10.0;
+    const latitude = latRaw / 1e7;
+    const longitude = lonRaw / 1e7;
+    const altitude = altRaw / 10.0;
 
-    let latitudeHex = latRaw.toString(16).toUpperCase();
-    let longitudeHex = lonRaw.toString(16).toUpperCase();
-    let latitudeBinary = latRaw.toString(2).padStart(32, "0");
-    let longitudeBinary = lonRaw.toString(2).padStart(32, "0");
+    const latitudeHex = latRaw.toString(16).toUpperCase();
+    const longitudeHex = lonRaw.toString(16).toUpperCase();
+    const latitudeBinary = latRaw.toString(2).padStart(32, "0");
+    const longitudeBinary = lonRaw.toString(2).padStart(32, "0");
 
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    if (
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
       console.warn("⚠ Invalid GPS coordinates received.");
       return {
         latitude: null,
@@ -96,18 +101,14 @@ function parseGPS(data) {
       longitudeBinary: null,
     };
   }
-}
+};
 
-function parseSpeed(data) {
+const parseSpeed = (data) => {
   try {
-    let speed = data.readUInt16BE(18) / 10;
+    const speed = data.readUInt16BE(18) / 10;
     return speed < 0.5 ? 0 : speed;
   } catch (error) {
     console.error("Error parsing speed:", error);
     return 0;
   }
-}
-
-module.exports = {
-  parseRuptelaData,
 };
