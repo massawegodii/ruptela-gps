@@ -11,3 +11,16 @@ export const handleGpsData = async (data, socket, io) => {
     console.error(" Error:", err);
   }
 };
+
+
+// GET all GPS data
+export const getAllGpsData = async (req, res) => {
+  try {
+    const data = await GpsData.find().sort({ timestamp: -1 });
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch GPS data" });
+  }
+};
+
+
