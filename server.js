@@ -18,7 +18,7 @@ mongoose.connect(process.env.MONGO_URI, {
 // WebSocket server
 const httpServer = http.createServer();
 const io = new Server(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: { origin: "*", methods: ["GET", "POST", "DELETE", "PATCH"] },
 });
 httpServer.listen(6000, () =>
   console.log(" WebSocket running at ws://64.23.202.81:6000")
@@ -35,5 +35,5 @@ const tcpServer = net.createServer((socket) => {
 });
 
 tcpServer.listen(process.env.PORT, "0.0.0.0", () =>
-  console.log(`🛰️ TCP server listening on port ${process.env.PORT}`)
+  console.log(`TCP server listening on port ${process.env.PORT}`)
 );
